@@ -9,4 +9,4 @@ BSArchive Dynamic Link Library and C++ bindings
 
 ## How to use
 
-Use the `libbsarch.dll`, `libbsarch.lib` and `libbsarch.h` in your project.
+Use the `libbsarch.dll` (The one created by Delphi, not Visual Studio), `libbsarch.lib` and `libbsarch.h` in your project.
