@@ -2,8 +2,6 @@
 
 #include "libbsarch.h"
 
-using namespace std::string_literals;
-
 #pragma comment(lib, "libbsarch")
 
 int main() {
@@ -23,6 +21,4 @@ int main() {
 	bsa_entry_list_free(entries);
 
 	bsa_free(archive);
-
-	printf("test\n");
 }
