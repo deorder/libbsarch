@@ -194,11 +194,11 @@ type
   TBSArchiveState = (stReading, stWriting);
   TBSArchiveStates = set of TBSArchiveState;
   TBSFileIterationProcCompat = function(aArchive: Pointer; const aFileName: PChar;
-    aFileRecord: Pointer; aFolderRecord: Pointer; aContext: Pointer): Boolean; {$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
+    aFileRecord: Pointer; aFolderRecord: Pointer; aContext: Pointer): Boolean; stdcall;
 
   TDDSInfo = record Width, Height, MipMaps: Integer; end;
   TBSFileDDSInfoProcCompat = procedure(aArchive: Pointer; const aFileName: PChar;
-    var aInfo: TDDSInfo); {$IFNDEF WINDOWS}cdecl{$ELSE}stdcall{$ENDIF};
+    var aInfo: TDDSInfo); stdcall;
 
   TwbBSHeaderTES3 = packed record
     HashOffset: Cardinal;
@@ -1536,7 +1536,8 @@ procedure TwbBSArchive.AddFile(const aRootDir, aFileName: string);
 var
   fname: string;
   i: integer;
-  Buffer: PByte;
+  buffer: PByte;
+  stream: TFileStream;
 begin
   if not (stWriting in fStates) then
     raise Exception.Create('Archive is not in writing mode');
@@ -1547,13 +1548,18 @@ begin
 
   fname := Copy(aFileName, i + 1, Length(aFileName));
 
-  with TFileStream.Create(aFileName, fmOpenRead + fmShareDenyNone) do try
-    GetMem(Buffer, Size);
-    Read(Buffer[0], Size);
-    AddFileCompat(fname, Size, Buffer);
+  stream := TFileStream.Create(aFileName, fmOpenRead + fmShareDenyNone);
+  try
+    GetMem(buffer, stream.Size);
+    try
+      stream.Read(buffer^, stream.Size);
+      AddFileCompat(fname, stream.Size, buffer);
+    finally
+      if Assigned(buffer) then
+        FreeMem(buffer);
+    end;
   finally
-    FreeAndNil(Buffer);
-    Free;
+    stream.Free;
   end;
 end;
 
