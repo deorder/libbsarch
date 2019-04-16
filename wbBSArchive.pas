@@ -291,9 +291,9 @@ type
   end;
   PPackedDataInfo = ^TPackedDataInfo;
 
-  TwbBSFileDataResult = record
-    Size: Cardinal;
-    Data: PByte;
+  TwbBSResultBuffer = packed record
+    size: Cardinal;
+    data: PByte;
   end;
 
   TwbBSEntryList = class(TStringList);
@@ -349,9 +349,9 @@ type
     procedure AddFile(const aRootDir, aFileName: string); overload;
     procedure AddFileCompat(const aFileName: string; const aSize: Cardinal; const aData: PByte);
     function FindFileRecord(const aFileName: string): Pointer;
-    function ExtractFileDataCompat(aFileRecord: Pointer): TwbBSFileDataResult; overload;
-    function ExtractFileDataCompat(const aFileName: string): TwbBSFileDataResult; overload;
-    procedure ReleaseFileDataCompat(fileDataResult: TwbBSFileDataResult);
+    function ExtractFileDataCompat(aFileRecord: Pointer): TwbBSResultBuffer; overload;
+    function ExtractFileDataCompat(const aFileName: string): TwbBSResultBuffer; overload;
+    procedure ReleaseFileDataCompat(fileDataResult: TwbBSResultBuffer);
     procedure ExtractFile(const aFileName, aSaveAs: string);
     procedure IterateFilesCompat(aProc: TBSFileIterationProcCompat; aContext: Pointer = nil);
     function FileExists(const aFileName: string): Boolean;
@@ -1868,7 +1868,7 @@ begin
 end;
 
 // Modified: Version for use in non-Borland C/C++ (Result not automatically freed)
-function TwbBSArchive.ExtractFileDataCompat(aFileRecord: Pointer): TwbBSFileDataResult;
+function TwbBSArchive.ExtractFileDataCompat(aFileRecord: Pointer): TwbBSResultBuffer;
 var
   FileTES3: PwbBSFileTES3;
   FileTES4: PwbBSFileTES4;
@@ -1892,9 +1892,9 @@ begin
       baTES3: begin
         FileTES3 := aFileRecord;
         fStream.Position := fDataOffset + FileTES3.Offset;
-        Result.Size := FileTES3.Size;
-        GetMem(Result.Data, FileTES3.Size);
-        fStream.ReadBuffer(Result.Data[0], Result.Size);
+        Result.size := FileTES3.Size;
+        GetMem(Result.data, FileTES3.Size);
+        fStream.ReadBuffer(Result.data[0], Result.size);
       end;
 
       baTES4, baFO3, baSSE: begin
@@ -1914,19 +1914,19 @@ begin
 
         if bCompressed then begin
           // reading uncompressed size
-          Result.Size := fStream.ReadCardinal;
-          GetMem(Result.Data, Result.Size);
+          Result.size := fStream.ReadCardinal;
+          GetMem(Result.data, Result.size);
           dec(size, SizeOf(Cardinal));
-          if (Result.Size > 0) and (size > 0) then begin
+          if (Result.size > 0) and (size > 0) then begin
             SetLength(Buffer, size);
             fStream.ReadBuffer(Buffer[0], Length(Buffer));
             if Assigned(Sync) then
               Sync.EndWrite;
             try
               if fType = baSSE then
-                lz4DecompressToUserBuf(@Buffer[0], Length(Buffer), @Result.Data[0], Result.Size)
+                lz4DecompressToUserBuf(@Buffer[0], Length(Buffer), @Result.data[0], Result.size)
               else try
-                DecompressToUserBuf(@Buffer[0], Length(Buffer), @Result.Data[0], Result.Size);
+                DecompressToUserBuf(@Buffer[0], Length(Buffer), @Result.data[0], Result.size);
               except
                 // ignore zlib's Buffer error since it happens in vanilla "Fallout - Misc.bsa"
                 // Bethesda probably used old buggy zlib version when packing it
@@ -1939,10 +1939,10 @@ begin
           end;
         end
         else begin
-          Result.Size := size;
-          GetMem(Result.Data, Result.Size);
+          Result.size := size;
+          GetMem(Result.data, Result.size);
           if size > 0 then
-            fStream.ReadBuffer(Result.Data[0], Result.Size);
+            fStream.ReadBuffer(Result.data[0], Result.size);
         end;
       end;
 
@@ -1952,21 +1952,21 @@ begin
         if FileFO4.PackedSize <> 0 then begin
           SetLength(Buffer, FileFO4.PackedSize);
           fStream.ReadBuffer(Buffer[0], Length(Buffer));
-          Result.Size := FileFO4.Size;
-          GetMem(Result.Data, Result.Size);
+          Result.size := FileFO4.Size;
+          GetMem(Result.data, Result.size);
           if Assigned(Sync) then
             Sync.EndWrite;
           try
-            DecompressToUserBuf(@Buffer[0], Length(Buffer), @Result.Data[0], Result.Size);
+            DecompressToUserBuf(@Buffer[0], Length(Buffer), @Result.data[0], Result.size);
           finally
             if Assigned(Sync) then
               Sync.BeginWrite;
           end;
         end
         else begin
-          Result.Size := FileFO4.Size;
-          GetMem(Result.Data, Result.Size);
-          fStream.ReadBuffer(Result.Data[0], Result.Size);
+          Result.size := FileFO4.Size;
+          GetMem(Result.data, Result.size);
+          fStream.ReadBuffer(Result.data[0], Result.size);
         end;
       end;
 
@@ -1977,10 +1977,10 @@ begin
         for i := Low(FileFO4.TexChunks) to High(FileFO4.TexChunks) do
           Inc(TexSize, FileFO4.TexChunks[i].Size);
 
-        Result.Size := Texsize;
-        GetMem(Result.Data, Result.Size);
+        Result.size := Texsize;
+        GetMem(Result.data, Result.size);
 
-        DDSHeader := @Result.Data[0];
+        DDSHeader := @Result.data[0];
         DDSHeader.Magic := MAGIC_DDS;
         DDSHeader.dwSize := SizeOf(TDDSHeader) - SizeOf(TMagic4);
         DDSHeader.dwWidth := FileFO4.Width;
@@ -1993,7 +1993,7 @@ begin
          DDSHeader.dwCaps := DDSHeader.dwCaps or DDSCAPS_MIPMAP or DDSCAPS_COMPLEX;
         DDSHeader.dwDepth := 1;
 
-        DDSHeaderDX10 := @Result.Data[SizeOf(TDDSHeader)];
+        DDSHeaderDX10 := @Result.data[SizeOf(TDDSHeader)];
         DDSHeaderDX10.resourceDimension := DDS_DIMENSION_TEXTURE2D;
         DDSHeaderDX10.arraySize := 1;
 
@@ -2159,9 +2159,9 @@ begin
         end;
         TexSize := SizeOf(TDDSHeader);
         if DDSHeader.ddspf.dwFourCC = MAGIC_DX10 then begin
-          ReallocMem(Result.Data, Result.Size + SizeOf(TDDSHeaderDX10));
+          ReallocMem(Result.data, Result.size + SizeOf(TDDSHeaderDX10));
           Inc(TexSize, SizeOf(TDDSHeaderDX10));
-          Result.Size := TexSize;
+          Result.size := TexSize;
         end;
         // append chunks
         for i := Low(FileFO4.TexChunks) to High(FileFO4.TexChunks) do with FileFO4.TexChunks[i] do begin
@@ -2173,7 +2173,7 @@ begin
             if Assigned(Sync) then
               Sync.EndWrite;
             try
-              DecompressToUserBuf(@Buffer[0], Length(Buffer), @Result.Data[TexSize], Size);
+              DecompressToUserBuf(@Buffer[0], Length(Buffer), @Result.data[TexSize], Size);
             finally
               if Assigned(Sync) then
                 Sync.BeginWrite;
@@ -2181,9 +2181,9 @@ begin
           end
           // uncompressed chunk
           else
-            fStream.ReadBuffer(Result.Data[TexSize], Size);
+            fStream.ReadBuffer(Result.data[TexSize], Size);
           Inc(TexSize, Size);
-          Result.Size := TexSize;
+          Result.size := TexSize;
         end;
       end
 
@@ -2197,7 +2197,7 @@ begin
 end;
 
 // Modified: Version for use in non-Borland C/C++
-function TwbBSArchive.ExtractFileDataCompat(const aFileName: string): TwbBSFileDataResult;
+function TwbBSArchive.ExtractFileDataCompat(const aFileName: string): TwbBSResultBuffer;
 var
   FileRecord: Pointer;
 begin
@@ -2213,16 +2213,16 @@ begin
 end;
 
 // Addded: For use in non-Borland C/C++
-procedure TwbBSArchive.ReleaseFileDataCompat(fileDataResult: TwbBSFileDataResult);
+procedure TwbBSArchive.ReleaseFileDataCompat(fileDataResult: TwbBSResultBuffer);
 begin
-  FreeAndNil(fileDataResult.Data);
-  fileDataResult.Size := 0;
+  FreeAndNil(fileDataResult.data);
+  fileDataResult.size := 0;
 end;
 
 procedure TwbBSArchive.ExtractFile(const aFileName, aSaveAs: string);
 var
   fs: TFileStream;
-  fileData: TwbBSFileDataResult;
+  fileData: TwbBSResultBuffer;
 begin
   if not (stReading in fStates) then
     raise Exception.Create('Archive is not loaded');
@@ -2230,7 +2230,7 @@ begin
   fs := TFileStream.Create(aSaveAs, fmCreate);
   try
     fileData := ExtractFileDataCompat(aFileName);
-    fs.Write(fileData.Data[0], fileData.Size);
+    fs.Write(fileData.data[0], fileData.size);
   finally
     ReleaseFileDataCompat(fileData);
     fs.Free;

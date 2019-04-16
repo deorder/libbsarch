@@ -7,9 +7,11 @@
 int main() {
 	bsa_archive_t archive = bsa_create();
 
-	bsa_load_from_file(archive, L"test_read.bsa");
+	bsa_result_message_t result = bsa_load_from_file(archive, L"test_read.bsa");
+  if(result.code < 0)
+    printf("%ls\n", result.text);
 	bsa_close(archive);
-
+  
 	bsa_entry_list_t entries = bsa_entry_list_create();
 	bsa_entry_list_add(entries, L"textures\\grass\\test.dds");
 

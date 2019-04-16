@@ -3,12 +3,12 @@
         <ProjectGuid>{381E4D59-4D34-46B3-B039-1B3C3ABEC58F}</ProjectGuid>
         <MainSource>libbsarch.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Library</AppType>
         <FrameworkType>None</FrameworkType>
         <ProjectVersion>18.6</ProjectVersion>
-        <Platform Condition="'$(Platform)'==''">Win32</Platform>
+        <Platform Condition="'$(Platform)'==''">Win64</Platform>
     </PropertyGroup>
     <PropertyGroup Condition="'$(Config)'=='Base' or '$(Base)'!=''">
         <Base>true</Base>
@@ -121,7 +121,8 @@
         <VerInfo_Keys>CompanyName=;FileDescription=$(MSBuildProjectName);FileVersion=1.0.0.0;InternalName=;LegalCopyright=;LegalTrademarks=;OriginalFilename=;ProgramID=com.embarcadero.$(MSBuildProjectName);ProductName=$(MSBuildProjectName);ProductVersion=1.0.0.0;Comments=</VerInfo_Keys>
         <Manifest_File>(None)</Manifest_File>
         <DCC_ExeOutput>X64\Debug\</DCC_ExeOutput>
-        <Debugger_HostApplication>X64\Debug\libbsarch-visualstudio-test.exe</Debugger_HostApplication>
+        <Debugger_HostApplication>D:\Projects\libbsarch\x64\Debug\libbsarch-visualstudio-test.exe</Debugger_HostApplication>
+        <Debugger_CWD>D:\Projects\libbsarch\x64\Debug</Debugger_CWD>
     </PropertyGroup>
     <ItemGroup>
         <DelphiCompile Include="$(MainSource)">

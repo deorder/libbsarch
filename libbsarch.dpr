@@ -8,134 +8,299 @@ uses
   wbStreams,
   wbBSArchive;
 
+type
+  TwbBSResultCode = (
+    BSA_RESULT_NONE = 0,
+    BSA_RESULT_EXCEPTION = -1
+  );
+  TwbBSResultMessage = packed record
+    code: ShortInt;
+    text: array[0..1023] of WideChar;
+  end;
+  TwbBSResultMessageBuffer = packed record
+    buffer: TwbBSResultBuffer;
+    message: TwbBSResultMessage;
+  end;  
+
 {Shared}
 
-function string_to_cstring(aString: String; const aStringBufferSize: Cardinal;
-  const aStringBuffer: PChar): Cardinal; stdcall;
+function string_to_cstring(
+  aString: String;
+  const aStringBufferSize: Cardinal;
+  const aStringBuffer: PChar
+): Integer; stdcall;
 begin
   Result := Min(aStringBufferSize, Length(AString));
   if (aStringBuffer <> nil) and (Result > 0) then
-    Move(AString[1], aStringBuffer^, Result * SizeOf(Char));
+    Move(AString[1], aStringBuffer^, Result * SizeOf(WideChar));
+end;
+
+function string_to_cstring_end(
+  aString: String;
+  const aStringBufferSize: Cardinal;
+  const aStringBuffer: PChar
+): Integer; stdcall;
+begin
+  Result := Min(aStringBufferSize - 1, Length(AString));
+  if (aStringBuffer <> nil) and (Result > 0) then
+  begin
+    Move(AString[1], aStringBuffer^, Result * SizeOf(WideChar));
+    aStringBuffer[Result] := #0;
+  end;
+end;
+
+procedure exception_handler(E: Exception; var Result: TwbBSResultMessage); stdcall;
+begin
+  Result.code := ShortInt(BSA_RESULT_EXCEPTION);
+  string_to_cstring_end(E.Message, Length(Result.text), Result.text);
+end;
+
+procedure buffer_exception_handler(E: Exception; var Result: TwbBSResultMessageBuffer); stdcall;
+begin
+  Result.buffer.size := 0;
+  Result.buffer.data := nil;
+  Result.message.code := ShortInt(BSA_RESULT_EXCEPTION);
+  string_to_cstring_end(E.Message, Length(Result.message.text), Result.message.text);
 end;
 
 {BSA File List}
 
 function bsa_entry_list_create:Pointer; stdcall;
 begin
-  Result := TwbBSEntryList.Create;
+  try
+    Result := TwbBSEntryList.Create;
+  except
+    Result := nil;
+  end;
 end;
 
-procedure bsa_entry_list_free(obj: Pointer); stdcall;
+function bsa_entry_list_free(obj: Pointer): TwbBSResultMessage; stdcall;
 begin
-  TwbBSEntryList(obj).Clear();
-  TwbBSEntryList(obj).free;
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSEntryList(obj).Clear();
+    TwbBSEntryList(obj).free;
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
-function bsa_entry_list_count(obj: Pointer): Cardinal; stdcall;
+function bsa_entry_list_count(obj: Pointer): Integer; stdcall;
 begin
-  Result := TwbBSEntryList(obj).Count;
+  try
+    Result := TwbBSEntryList(obj).Count;
+  except
+    Result := Ord(BSA_RESULT_EXCEPTION);
+  end;
 end;
 
-procedure bsa_entry_list_add(obj: Pointer; const aEntryString: PChar); stdcall;
+function bsa_entry_list_add(obj: Pointer; const aEntryString: PChar): TwbBSResultMessage; stdcall;
 begin
-  TwbBSEntryList(obj).Add(String(aEntryString));
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSEntryList(obj).Add(String(aEntryString));
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
-function bsa_entry_list_get(obj: Pointer; const aIndex: Cardinal; const aStringBufferSize: Cardinal; const aStringBuffer: PChar): Cardinal; stdcall;
+function bsa_entry_list_get(obj: Pointer; const aIndex: Cardinal; const aStringBufferSize: Cardinal; const aStringBuffer: PChar): Integer; stdcall;
 begin
-  Result := string_to_cstring(TwbBSEntryList(obj).Strings[aIndex], aStringBufferSize, aStringBuffer);
+  try
+    Result := string_to_cstring_end(TwbBSEntryList(obj).Strings[aIndex], aStringBufferSize, aStringBuffer);
+  except
+    Result := Integer(BSA_RESULT_EXCEPTION);
+  end;
 end;
 
 {BSArchive}
 
 function bsa_create:Pointer; stdcall;
 begin
-  Result := TwbBSArchive.Create;
+  try
+    Result := TwbBSArchive.Create;
+  except
+    Result := nil;
+  end;
 end;
 
-procedure bsa_free(obj: Pointer); stdcall;
+function bsa_free(obj: Pointer): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).free;
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).free;
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
-procedure bsa_load_from_file(obj: Pointer; const aFileName: PChar); stdcall;
+function bsa_load_from_file(obj: Pointer; const aFileName: PChar): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).LoadFromFile(String(aFileName));
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).LoadFromFile(String(aFileName));
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
-procedure bsa_create_archive(obj: Pointer; const aFileName: PChar; aType: TBSArchiveType; aFileList: TwbBSEntryList); stdcall;
+function bsa_create_archive(obj: Pointer; const aFileName: PChar; aType: TBSArchiveType; aFileList: TwbBSEntryList): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).CreateArchiveCompat(String(aFileName), aType, aFileList);
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).CreateArchiveCompat(String(aFileName), aType, aFileList);
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
-procedure bsa_save(obj: Pointer); stdcall;
+function bsa_save(obj: Pointer): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).Save;
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).Save;
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
-procedure bsa_add_file_from_disk(obj: Pointer; const aRootDir, aFileName: PChar); stdcall;
+function bsa_add_file_from_disk(obj: Pointer; const aRootDir, aFileName: PChar): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).AddFile(String(aRootDir), String(aFileName));
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).AddFile(String(aRootDir), String(aFileName));
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
-procedure bsa_add_file_from_memory(obj: Pointer; const aFileName: PChar; const aSize: Cardinal; const aData: PByte); stdcall;
+function bsa_add_file_from_memory(obj: Pointer; const aFileName: PChar; const aSize: Cardinal; const aData: PByte): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).AddFileCompat(String(aFileName), aSize, aData);
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).AddFileCompat(String(aFileName), aSize, aData);
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
 function bsa_find_file_record(obj: Pointer; const aFileName: PChar): Pointer; stdcall;
 begin
-  Result := TwbBSArchive(obj).FindFileRecord(String(aFileName));
+  try
+    Result := TwbBSArchive(obj).FindFileRecord(String(aFileName));
+  except
+    Result := nil
+  end;
 end;
 
-function bsa_extract_file_data_by_record(obj: Pointer; aFileRecord: Pointer): TwbBSFileDataResult; stdcall;
+function bsa_extract_file_data_by_record(obj: Pointer; aFileRecord: Pointer): TwbBSResultMessageBuffer; stdcall;
 begin
-  Result := TwbBSArchive(obj).ExtractFileDataCompat(aFileRecord);
+  Result.message.code := Ord(BSA_RESULT_NONE);
+  try
+    Result.buffer := TwbBSArchive(obj).ExtractFileDataCompat(aFileRecord);
+  except
+    on E: Exception do
+      buffer_exception_handler(E, Result);
+  end;
 end;
 
-function bsa_extract_file_data_by_filename(obj: Pointer; const aFileName: PChar): TwbBSFileDataResult; stdcall;
+function bsa_extract_file_data_by_filename(obj: Pointer; const aFileName: PChar): TwbBSResultMessageBuffer; stdcall;
 begin
-  Result := TwbBSArchive(obj).ExtractFileDataCompat(String(aFileName));
+  Result.message.code := Ord(BSA_RESULT_NONE);
+  try
+    Result.buffer := TwbBSArchive(obj).ExtractFileDataCompat(String(aFileName));
+  except
+    on E: Exception do
+      buffer_exception_handler(E, Result);
+  end;
 end;
 
-procedure bsa_file_data_free(obj: Pointer; fileDataResult: TwbBSFileDataResult); stdcall;
+function bsa_file_data_free(obj: Pointer; fileDataResult: TwbBSResultMessageBuffer): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).ReleaseFileDataCompat(fileDataResult);
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).ReleaseFileDataCompat(fileDataResult.buffer);
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
-procedure bsa_extract_file(obj: Pointer; const aFileName, aSaveAs: PChar); stdcall;
+function bsa_extract_file(obj: Pointer; const aFileName, aSaveAs: PChar): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).ExtractFile(String(aFileName), String(aSaveAs));
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).ExtractFile(String(aFileName), String(aSaveAs));
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
-procedure bsa_iterate_files(obj: Pointer; aProc: TBSFileIterationProcCompat; aContext: Pointer); stdcall;
+function bsa_iterate_files(obj: Pointer; aProc: TBSFileIterationProcCompat; aContext: Pointer): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).IterateFilesCompat(aProc, aContext);
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).IterateFilesCompat(aProc, aContext);
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
 function bsa_file_exists(obj: Pointer; const aFileName: string): Boolean; stdcall;
 begin
-  Result := TwbBSArchive(obj).FileExists(aFileName);
+  try
+    Result := TwbBSArchive(obj).FileExists(aFileName);
+  except
+    Result := False;  
+  end;
 end;
 
-procedure bsa_get_resource_list(obj: Pointer; const aEntryResultList: TwbBSEntryList; aFolder: PChar); stdcall;
+function bsa_get_resource_list(obj: Pointer; const aEntryResultList: TwbBSEntryList; aFolder: PChar): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).ResourceListCompat(aEntryResultList, String(aFolder));
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).ResourceListCompat(aEntryResultList, String(aFolder));
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
-procedure bsa_resolve_hash(obj: Pointer; const aHash: UInt64; const aEntryResultList: TwbBSEntryList); stdcall;
+function bsa_resolve_hash(obj: Pointer; const aHash: UInt64; const aEntryResultList: TwbBSEntryList): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).ResolveHashCompat(aHash, aEntryResultList);
-end;
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).ResolveHashCompat(aHash, aEntryResultList);
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
+end;     
 
-procedure bsa_close(obj: Pointer); stdcall;
+function bsa_close(obj: Pointer): TwbBSResultMessage; stdcall;
 begin
-  TwbBSArchive(obj).Close;
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).Close;
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
 end;
 
 function bsa_filename_get(obj: Pointer; const aStringBufferSize: Cardinal; const aStringBuffer: PChar): Cardinal; stdcall;
 begin
-  Result := string_to_cstring(TwbBSArchive(obj).FileName, aStringBufferSize, aStringBuffer);
+  Result := string_to_cstring_end(TwbBSArchive(obj).FileName, aStringBufferSize, aStringBuffer);
 end;
 
 function bsa_archive_type_get(obj: Pointer): TBSArchiveType; stdcall;
@@ -150,7 +315,7 @@ end;
 
 function bsa_format_name_get(obj: Pointer; const aStringBufferSize: Cardinal; const aStringBuffer: PChar): Cardinal; stdcall;
 begin
-  Result := string_to_cstring(TwbBSArchive(obj).FormatName, aStringBufferSize, aStringBuffer);
+  Result := string_to_cstring_end(TwbBSArchive(obj).FormatName, aStringBufferSize, aStringBuffer);
 end;
 
 function bsa_file_count_get(obj: Pointer): Cardinal; stdcall;
