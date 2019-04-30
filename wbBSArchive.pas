@@ -2215,7 +2215,7 @@ end;
 // Addded: For use in non-Borland C/C++
 procedure TwbBSArchive.ReleaseFileDataCompat(fileDataResult: TwbBSResultBuffer);
 begin
-  FreeAndNil(fileDataResult.data);
+  FreeMem(fileDataResult.data);
   fileDataResult.size := 0;
 end;
 
