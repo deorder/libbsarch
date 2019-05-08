@@ -193,11 +193,11 @@ type
   TBSArchiveType = (baNone, baTES3, baTES4, baFO3, baSSE, baFO4, baFO4dds);
   TBSArchiveState = (stReading, stWriting);
   TBSArchiveStates = set of TBSArchiveState;
-  TBSFileIterationProcCompat = function(aArchive: Pointer; const aFileName: PChar;
+  TBSFileIterationProcCompat = function(aArchive: Pointer; const aFilePath: PChar;
     aFileRecord: Pointer; aFolderRecord: Pointer; aContext: Pointer): Boolean; stdcall;
 
   TDDSInfo = record Width, Height, MipMaps: Integer; end;
-  TBSFileDDSInfoProcCompat = procedure(aArchive: Pointer; const aFileName: PChar;
+  TBSFileDDSInfoProcCompat = procedure(aArchive: Pointer; const aFilePath: PChar;
     var aInfo: TDDSInfo); stdcall;
 
   TwbBSHeaderTES3 = packed record
@@ -330,9 +330,9 @@ type
     function GetArchiveFormatName: string;
     function GetFileCount: Cardinal;
     procedure SetArchiveFlags(aFlags: Cardinal);
-    function FindFileRecordTES3(const aFileName: string; var aFileIdx: Integer): Boolean;
-    function FindFileRecordTES4(const aFileName: string; var aFolderIdx, aFileIdx: Integer): Boolean;
-    function FindFileRecordFO4(const aFileName: string; var aFileIdx: Integer): Boolean;
+    function FindFileRecordTES3(const aFilePath: string; var aFileIdx: Integer): Boolean;
+    function FindFileRecordTES4(const aFilePath: string; var aFolderIdx, aFileIdx: Integer): Boolean;
+    function FindFileRecordFO4(const aFilePath: string; var aFileIdx: Integer): Boolean;
     function GetDDSMipChunkNum(var aDDSInfo: TDDSInfo): Integer;
     function CalcDataHash(aData: Pointer; aLen: Cardinal): TPackedDataHash;
     function FindPackedData(aSize: Cardinal; aHash: TPackedDataHash; aFileRecord: Pointer): Boolean;
@@ -342,19 +342,20 @@ type
     Sync: IReadWriteSync;
     constructor Create;
     destructor Destroy; override;
-    procedure LoadFromFile(const aFileName: string);
-    procedure CreateArchiveCompat(const aFileName: string; aType: TBSArchiveType;
+    procedure LoadFromFile(const aFilePath: string);
+    procedure CreateArchiveCompat(const aFilePath: string; aType: TBSArchiveType;
       aFilesList: TwbBSEntryList = nil);
     procedure Save;
-    procedure AddFile(const aRootDir, aFileName: string); overload;
-    procedure AddFileCompat(const aFileName: string; const aSize: Cardinal; const aData: PByte);
-    function FindFileRecord(const aFileName: string): Pointer;
+    procedure AddFileDisk(const aFilePath, aSourcePath: string);
+    procedure AddFileDiskRoot(const aRootDir, aSourcePath: string);
+    procedure AddFileDataCompat(const aFilePath: string; const aSize: Cardinal; const aData: PByte);
+    function FindFileRecord(const aFilePath: string): Pointer;
     function ExtractFileDataCompat(aFileRecord: Pointer): TwbBSResultBuffer; overload;
-    function ExtractFileDataCompat(const aFileName: string): TwbBSResultBuffer; overload;
+    function ExtractFileDataCompat(const aFilePath: string): TwbBSResultBuffer; overload;
     procedure ReleaseFileDataCompat(fileDataResult: TwbBSResultBuffer);
-    procedure ExtractFile(const aFileName, aSaveAs: string);
+    procedure ExtractFile(const aFilePath, aSaveAs: string);
     procedure IterateFilesCompat(aProc: TBSFileIterationProcCompat; aContext: Pointer = nil);
-    function FileExists(const aFileName: string): Boolean;
+    function FileExists(const aFilePath: string): Boolean;
     procedure ResourceListCompat(const aEntryResultList: TwbBSEntryList; aFolder: string = '');
     procedure ResolveHashCompat(const aHash: UInt64; const aEntryResultList: TwbBSEntryList);
     procedure Close;
@@ -371,11 +372,11 @@ type
     property DDSInfoProc: TBSFileDDSInfoProcCompat read fDDSInfoProc write fDDSInfoProc;
   end;
 
-function SplitDirName(const aFileName: string; var Dir, Name: string): Integer;
-function SplitNameExt(const aFileName: string; var Name, Ext: string): Integer;
-function CreateHashTES3(const aFileName: string): UInt64;
-function CreateHashTES4(const aFileName: string): UInt64; overload;
-function CreateHashFO4(const aFileName: string): Cardinal;
+function SplitDirName(const aFilePath: string; var Dir, Name: string): Integer;
+function SplitNameExt(const aFilePath: string; var Name, Ext: string): Integer;
+function CreateHashTES3(const aFilePath: string): UInt64;
+function CreateHashTES4(const aFilePath: string): UInt64; overload;
+function CreateHashFO4(const aFilePath: string): Cardinal;
 
 implementation
 
@@ -594,35 +595,35 @@ begin
   end;
 end;
 
-function SplitDirName(const aFileName: string; var Dir, Name: string): Integer;
+function SplitDirName(const aFilePath: string; var Dir, Name: string): Integer;
 begin
-  Result := LastCharPos(aFileName, '\');
+  Result := LastCharPos(aFilePath, '\');
   if Result = 0 then
-    Result := LastCharPos(aFileName, '/');
-  Dir := Copy(aFileName, 1, Pred(Result));
-  Name := Copy(aFileName, Succ(Result), Length(aFileName) - Result);
+    Result := LastCharPos(aFilePath, '/');
+  Dir := Copy(aFilePath, 1, Pred(Result));
+  Name := Copy(aFilePath, Succ(Result), Length(aFilePath) - Result);
 end;
 
-function SplitNameExt(const aFileName: string; var Name, Ext: string): Integer;
+function SplitNameExt(const aFilePath: string; var Name, Ext: string): Integer;
 begin
-  Result := LastCharPos(aFileName, '.');
+  Result := LastCharPos(aFilePath, '.');
   if Result <> 0 then begin
-    Name := Copy(aFileName, 1, Pred(Result));
-    Ext := Copy(aFileName, Result, Length(aFileName) - Result + 2);
+    Name := Copy(aFilePath, 1, Pred(Result));
+    Ext := Copy(aFilePath, Result, Length(aFilePath) - Result + 2);
   end
   else begin
-    Name := aFileName;
+    Name := aFilePath;
     Ext := '';
   end;
 end;
 
-function CreateHashTES3(const aFileName: string): UInt64;
+function CreateHashTES3(const aFilePath: string): UInt64;
 var
   s: AnsiString;
   i, l: integer;
   sum, off, temp, n: Cardinal;
 begin
-  s := AnsiString(aFileName);
+  s := AnsiString(aFilePath);
   l := Length(s) shr 1;
 
   sum := 0; off := 0;
@@ -689,22 +690,22 @@ begin
   Result := Result + UInt64(hash) shl 32;
 end;
 
-function CreateHashTES4(const aFileName: string): UInt64; overload;
+function CreateHashTES4(const aFilePath: string): UInt64; overload;
 var
   fname, fext: string;
 begin
-  SplitNameExt(aFileName, fname, fext);
+  SplitNameExt(aFilePath, fname, fext);
   Result := CreateHashTES4(fname, fext);
 end;
 
-function CreateHashFO4(const aFileName: string): Cardinal;
+function CreateHashFO4(const aFilePath: string): Cardinal;
 var
   i: Integer;
   s: AnsiString;
   c: AnsiChar;
 begin
   Result := 0;
-  s := AnsiString(aFileName);
+  s := AnsiString(aFilePath);
   for i := 1 to Length(s) do begin
     c := s[i];
     if Byte(c) > 127 then Continue;
@@ -777,12 +778,12 @@ begin
     fHeaderTES4.Flags := fHeaderTES4.Flags or ARCHIVE_COMPRESS;
 end;
 
-function TwbBSArchive.FindFileRecordTES3(const aFileName: string; var aFileIdx: Integer): Boolean;
+function TwbBSArchive.FindFileRecordTES3(const aFilePath: string; var aFileIdx: Integer): Boolean;
 var
   h: UInt64;
   i: integer;
 begin
-  h := CreateHashTES3(aFileName);
+  h := CreateHashTES3(aFilePath);
 
   Result := False;
   for i := Low(fFilesTES3) to High(fFilesTES3) do
@@ -793,13 +794,13 @@ begin
     end;
 end;
 
-function TwbBSArchive.FindFileRecordTES4(const aFileName: string; var aFolderIdx, aFileIdx: Integer): Boolean;
+function TwbBSArchive.FindFileRecordTES4(const aFilePath: string; var aFolderIdx, aFileIdx: Integer): Boolean;
 var
   fdir, fname, name, ext: string;
   h: UInt64;
   i, j: integer;
 begin
-  if SplitDirName(aFileName, fdir, fname) = 0 then
+  if SplitDirName(aFilePath, fdir, fname) = 0 then
     Exit(False);
 
   Result := False;
@@ -829,14 +830,14 @@ begin
   end;
 end;
 
-function TwbBSArchive.FindFileRecordFO4(const aFileName: string; var aFileIdx: Integer): Boolean;
+function TwbBSArchive.FindFileRecordFO4(const aFilePath: string; var aFileIdx: Integer): Boolean;
 var
   fdir, fname, name, ext: string;
   hdir, hfile: Cardinal;
   hext: TMagic4;
   i: integer;
 begin
-  if SplitDirName(aFileName, fdir, fname) = 0 then
+  if SplitDirName(aFilePath, fdir, fname) = 0 then
     Exit(False);
 
   SplitNameExt(fname, name, ext);
@@ -855,7 +856,7 @@ begin
     end;
 end;
 
-function TwbBSArchive.FindFileRecord(const aFileName: string): Pointer;
+function TwbBSArchive.FindFileRecord(const aFilePath: string): Pointer;
 var
   i, j: integer;
 begin
@@ -863,11 +864,11 @@ begin
 
   case fType of
     baTES3:
-      if FindFileRecordTES3(aFileName, i) then Result := @fFilesTES3[i];
+      if FindFileRecordTES3(aFilePath, i) then Result := @fFilesTES3[i];
     baTES4, baFO3, baSSE:
-      if FindFileRecordTES4(aFileName, i, j) then Result := @fFoldersTES4[i].Files[j];
+      if FindFileRecordTES4(aFilePath, i, j) then Result := @fFoldersTES4[i].Files[j];
     baFO4, baFO4dds:
-      if FindFileRecordFO4(aFileName, i) then Result := @fFilesFO4[i];
+      if FindFileRecordFO4(aFilePath, i) then Result := @fFilesFO4[i];
   end;
 end;
 
@@ -951,14 +952,14 @@ begin
   Inc(fPackedDataCount);
 end;
 
-procedure TwbBSArchive.LoadFromFile(const aFileName: string);
+procedure TwbBSArchive.LoadFromFile(const aFilePath: string);
 var
   i, j: Integer;
 begin
   if fStates * [stReading, stWriting] <> [] then
     Close;
 
-  fStream := TwbReadOnlyCachedFileStream.Create(aFileName, fmOpenRead or fmShareDenyWrite);
+  fStream := TwbReadOnlyCachedFileStream.Create(aFilePath, fmOpenRead or fmShareDenyWrite);
 
   // magic
   fMagic := Int2Magic(fStream.ReadCardinal);
@@ -1099,7 +1100,7 @@ begin
 
   end;
 
-  fFileName := aFileName;
+  fFileName := aFilePath;
   Include(fStates, stReading);
 end;
 
@@ -1131,7 +1132,7 @@ begin
   Result := CompareStr(List[Index1], List[Index2]);
 end;
 
-procedure TwbBSArchive.CreateArchiveCompat(const aFileName: string; aType: TBSArchiveType;
+procedure TwbBSArchive.CreateArchiveCompat(const aFilePath: string; aType: TBSArchiveType;
   aFilesList: TwbBSEntryList = nil);
 var
   HashPairs: array of THashPair;
@@ -1371,8 +1372,8 @@ begin
   end;
 
 
-  fStream := TwbWriteCachedFileStream.Create(aFileName, fmCreate);
-  fFileName := aFileName;
+  fStream := TwbWriteCachedFileStream.Create(aFilePath, fmCreate);
+  fFileName := aFilePath;
   Include(fStates, stWriting);
 
   // reserve space for the header
@@ -1532,7 +1533,9 @@ begin
   Close;
 end;
 
-procedure TwbBSArchive.AddFile(const aRootDir, aFileName: string);
+
+
+procedure TwbBSArchive.AddFileDisk(const aFilePath, aSourcePath: string);
 var
   fname: string;
   i: integer;
@@ -1542,18 +1545,12 @@ begin
   if not (stWriting in fStates) then
     raise Exception.Create('Archive is not in writing mode');
 
-  i := Length(aRootDir);
-  if (i > 1) and (aRootDir[Length(aRootDir)] <> '\') then
-    Inc(i);
-
-  fname := Copy(aFileName, i + 1, Length(aFileName));
-
-  stream := TFileStream.Create(aFileName, fmOpenRead + fmShareDenyNone);
+  stream := TFileStream.Create(aSourcePath, fmOpenRead + fmShareDenyNone);
   try
     GetMem(buffer, stream.Size);
     try
       stream.Read(buffer^, stream.Size);
-      AddFileCompat(fname, stream.Size, buffer);
+      AddFileDataCompat(aFilePath, stream.Size, buffer);
     finally
       if Assigned(buffer) then
         FreeMem(buffer);
@@ -1563,8 +1560,22 @@ begin
   end;
 end;
 
+procedure TwbBSArchive.AddFileDiskRoot(const aRootDir, aSourcePath: string);
+var
+  fname: string;
+  i: integer;
+begin
+  i := Length(aRootDir);
+  if (i > 1) and (aRootDir[Length(aRootDir)] <> '\') then
+    Inc(i);
+
+  fname := Copy(aSourcePath, i + 1, Length(aSourcePath));
+
+  AddFileDisk(fname, aSourcePath);
+end;
+
 // Modified: Version for use in non-Borland C/C++
-procedure TwbBSArchive.AddFileCompat(const aFileName: string; const aSize: Cardinal; const aData: PByte);
+procedure TwbBSArchive.AddFileDataCompat(const aFilePath: string; const aSize: Cardinal; const aData: PByte);
 var
   i, j, Off, MipSize, BitsPerPixel: integer;
   fdir, fname, name, ext: string;
@@ -1589,8 +1600,8 @@ begin
   try
     case fType of
       baTES3: begin
-        if not FindFileRecordTES3(aFileName, i) then
-          raise Exception.Create('File not found in files table: ' + aFileName);
+        if not FindFileRecordTES3(aFilePath, i) then
+          raise Exception.Create('File not found in files table: ' + aFilePath);
 
         if FindPackedData(aSize, DataHash, @fFilesTES3[i]) then
           Exit;
@@ -1602,8 +1613,8 @@ begin
       end;
 
       baTES4, baFO3, baSSE: begin
-        if not FindFileRecordTES4(aFileName, i, j) then
-          raise Exception.Create('File not found in files table: ' + aFileName);
+        if not FindFileRecordTES4(aFilePath, i, j) then
+          raise Exception.Create('File not found in files table: ' + aFilePath);
 
         if FindPackedData(aSize, DataHash, @fFoldersTES4[i].Files[j]) then
           Exit;
@@ -1669,8 +1680,8 @@ begin
       end;
 
       baFO4: begin
-        if SplitDirName(aFileName, fdir, fname) = 0 then
-          raise Exception.Create('File is missing the folder part: ' + aFileName);
+        if SplitDirName(aFilePath, fdir, fname) = 0 then
+          raise Exception.Create('File is missing the folder part: ' + aFilePath);
 
         SplitNameExt(fname, name, ext);
         if Length(ext) > 1 then Delete(ext, 1, 1); // no dot in extension
@@ -1678,7 +1689,7 @@ begin
         i := fHeaderFO4.FileCount;
         Inc(fHeaderFO4.FileCount);
         // archive2.exe uses /
-        fFilesFO4[i].Name := StringReplace(aFileName, '\', '/', [rfReplaceAll]);
+        fFilesFO4[i].Name := StringReplace(aFilePath, '\', '/', [rfReplaceAll]);
         fFilesFO4[i].DirHash := CreateHashFO4(fdir);
         fFilesFO4[i].NameHash := CreateHashFO4(name);
         fFilesFO4[i].Ext := Int2Magic(Str2MagicInt(ext));
@@ -1711,8 +1722,8 @@ begin
       end;
 
       baFO4dds: begin
-        if SplitDirName(aFileName, fdir, fname) = 0 then
-          raise Exception.Create('File is missing the folder part: ' + aFileName);
+        if SplitDirName(aFilePath, fdir, fname) = 0 then
+          raise Exception.Create('File is missing the folder part: ' + aFilePath);
 
         SplitNameExt(fname, name, ext);
         if Length(ext) > 1 then Delete(ext, 1, 1); // no dot in extension
@@ -1721,7 +1732,7 @@ begin
         i := fHeaderFO4.FileCount;
         Inc(fHeaderFO4.FileCount);
         // archive2.exe uses /
-        fFilesFO4[i].Name := StringReplace(aFileName, '\', '/', [rfReplaceAll]);
+        fFilesFO4[i].Name := StringReplace(aFilePath, '\', '/', [rfReplaceAll]);
         fFilesFO4[i].DirHash := CreateHashFO4(fdir);
         fFilesFO4[i].NameHash := CreateHashFO4(name);
         fFilesFO4[i].Ext := Int2Magic(Str2MagicInt(ext));
@@ -2197,14 +2208,14 @@ begin
 end;
 
 // Modified: Version for use in non-Borland C/C++
-function TwbBSArchive.ExtractFileDataCompat(const aFileName: string): TwbBSResultBuffer;
+function TwbBSArchive.ExtractFileDataCompat(const aFilePath: string): TwbBSResultBuffer;
 var
   FileRecord: Pointer;
 begin
   if not (stReading in fStates) then
     raise Exception.Create('Archive is not loaded');
 
-  FileRecord := FindFileRecord(aFileName);
+  FileRecord := FindFileRecord(aFilePath);
 
   if not Assigned(FileRecord) then
     raise Exception.Create('File not found in archive');
@@ -2219,7 +2230,7 @@ begin
   fileDataResult.size := 0;
 end;
 
-procedure TwbBSArchive.ExtractFile(const aFileName, aSaveAs: string);
+procedure TwbBSArchive.ExtractFile(const aFilePath, aSaveAs: string);
 var
   fs: TFileStream;
   fileData: TwbBSResultBuffer;
@@ -2229,7 +2240,7 @@ begin
 
   fs := TFileStream.Create(aSaveAs, fmCreate);
   try
-    fileData := ExtractFileDataCompat(aFileName);
+    fileData := ExtractFileDataCompat(aFilePath);
     fs.Write(fileData.data[0], fileData.size);
   finally
     ReleaseFileDataCompat(fileData);
@@ -2285,9 +2296,9 @@ begin
     end;
 end;
 
-function TwbBSArchive.FileExists(const aFileName: string): Boolean;
+function TwbBSArchive.FileExists(const aFilePath: string): Boolean;
 begin
-  Result := Assigned(FindFileRecord(aFileName));
+  Result := Assigned(FindFileRecord(aFilePath));
 end;
 
 procedure TwbBSArchive.Close;

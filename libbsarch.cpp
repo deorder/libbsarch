@@ -32,11 +32,11 @@ BSARCH_DLL_API(bsa_result_message_t) bsa_free(bsa_archive_t archive) {
   return { 0 };
 }
 
-BSARCH_DLL_API(bsa_result_message_t) bsa_load_from_file(bsa_archive_t archive, const wchar_t *filename) {
+BSARCH_DLL_API(bsa_result_message_t) bsa_load_from_file(bsa_archive_t archive, const wchar_t *file_path) {
   return { 0 };
 }
 
-BSARCH_DLL_API(bsa_result_message_t) bsa_create_archive(bsa_archive_t archive, const wchar_t *filename, bsa_archive_type_t archive_type, bsa_entry_list_t entry_list) {
+BSARCH_DLL_API(bsa_result_message_t) bsa_create_archive(bsa_archive_t archive, const wchar_t *file_path, bsa_archive_type_t archive_type, bsa_entry_list_t entry_list) {
   return { 0 };
 }
 
@@ -44,15 +44,19 @@ BSARCH_DLL_API(bsa_result_message_t) bsa_save(bsa_archive_t archive) {
   return { 0 };
 }
 
-BSARCH_DLL_API(bsa_result_message_t) bsa_add_file_from_disk(bsa_archive_t archive, const wchar_t *root_dir, const wchar_t *filename) {
+BSARCH_DLL_API(bsa_result_message_t) bsa_add_file_from_disk(bsa_archive_t archive, const wchar_t *file_path, const wchar_t *source_path) {
   return { 0 };
 }
 
-BSARCH_DLL_API(bsa_result_message_t) bsa_add_file_from_memory(bsa_archive_t archive, const wchar_t *filename, uint32_t size, bsa_buffer_t data) {
+BSARCH_DLL_API(bsa_result_message_t) bsa_add_file_from_disk_root(bsa_archive_t archive, const wchar_t* root_dir, const wchar_t* source_path) {
   return { 0 };
 }
 
-BSARCH_DLL_API(bsa_file_record_t) bsa_find_file_record(bsa_archive_t archive, const wchar_t *filename) {
+BSARCH_DLL_API(bsa_result_message_t) bsa_add_file_from_memory(bsa_archive_t archive, const wchar_t *file_path, uint32_t size, bsa_buffer_t data) {
+  return { 0 };
+}
+
+BSARCH_DLL_API(bsa_file_record_t) bsa_find_file_record(bsa_archive_t archive, const wchar_t *file_path) {
   return NULL;
 }
 
@@ -60,7 +64,7 @@ BSARCH_DLL_API(bsa_result_message_buffer_t) bsa_extract_file_data_by_record(bsa_
   return { 0 };
 }
 
-BSARCH_DLL_API(bsa_result_message_buffer_t) bsa_extract_file_data_by_filename(bsa_archive_t archive, const wchar_t *filename) {
+BSARCH_DLL_API(bsa_result_message_buffer_t) bsa_extract_file_data_by_filename(bsa_archive_t archive, const wchar_t *file_path) {
   return { 0 };
 }
 
@@ -68,7 +72,7 @@ BSARCH_DLL_API(bsa_result_message_t) bsa_file_data_free(bsa_archive_t archive, b
   return { 0 };
 }
 
-BSARCH_DLL_API(bsa_result_message_t) bsa_extract_file(bsa_archive_t archive, const wchar_t *filename, const wchar_t *save_as) {
+BSARCH_DLL_API(bsa_result_message_t) bsa_extract_file(bsa_archive_t archive, const wchar_t *file_path, const wchar_t *save_as) {
   return { 0 };
 }
 
@@ -76,7 +80,7 @@ BSARCH_DLL_API(bsa_result_message_t) bsa_iterate_files(bsa_archive_t archive, bs
   return { 0 };
 }
 
-BSARCH_DLL_API(bool) bsa_file_exists(bsa_archive_t archive, const wchar_t *filename) {
+BSARCH_DLL_API(bool) bsa_file_exists(bsa_archive_t archive, const wchar_t *file_path) {
   return false;
 }
 

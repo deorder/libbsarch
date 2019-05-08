@@ -65,9 +65,13 @@ int main() {
   {
     bsa_entry_list_t entries = bsa_entry_list_create();
     bsa_entry_list_add(entries, L"textures\\grass\\test.dds");
+    bsa_entry_list_add(entries, L"textures\\grass\\test2.dds");
 
     bsa_create_archive(archive, L"test_write.bsa", baSSE, entries);
-    bsa_add_file_from_disk(archive, L"files", L"files\\textures\\grass\\test.dds");
+    bsa_add_file_from_disk_root(archive, L"", L"textures\\grass\\test.dds");
+    result = bsa_add_file_from_disk(archive, L"textures\\grass\\test2.dds", L"textures\\grass\\test.dds");
+    if (result.code < 0)
+      printf("%ls\n", result.text);
     bsa_save(archive);
     bsa_close(archive);
 

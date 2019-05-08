@@ -137,22 +137,22 @@ begin
   end;
 end;
 
-function bsa_load_from_file(obj: Pointer; const aFileName: PChar): TwbBSResultMessage; stdcall;
+function bsa_load_from_file(obj: Pointer; const aFilePath: PChar): TwbBSResultMessage; stdcall;
 begin
   Result.code := Ord(BSA_RESULT_NONE);
   try
-    TwbBSArchive(obj).LoadFromFile(String(aFileName));
+    TwbBSArchive(obj).LoadFromFile(String(aFilePath));
   except
     on E: Exception do
       exception_handler(E, Result);
   end;
 end;
 
-function bsa_create_archive(obj: Pointer; const aFileName: PChar; aType: TBSArchiveType; aFileList: TwbBSEntryList): TwbBSResultMessage; stdcall;
+function bsa_create_archive(obj: Pointer; const aFilePath: PChar; aType: TBSArchiveType; aFileList: TwbBSEntryList): TwbBSResultMessage; stdcall;
 begin
   Result.code := Ord(BSA_RESULT_NONE);
   try
-    TwbBSArchive(obj).CreateArchiveCompat(String(aFileName), aType, aFileList);
+    TwbBSArchive(obj).CreateArchiveCompat(String(aFilePath), aType, aFileList);
   except
     on E: Exception do
       exception_handler(E, Result);
@@ -170,32 +170,43 @@ begin
   end;
 end;
 
-function bsa_add_file_from_disk(obj: Pointer; const aRootDir, aFileName: PChar): TwbBSResultMessage; stdcall;
+function bsa_add_file_from_disk_root(obj: Pointer; const aRootDir, aSourcePath: PChar): TwbBSResultMessage; stdcall;
 begin
   Result.code := Ord(BSA_RESULT_NONE);
   try
-    TwbBSArchive(obj).AddFile(String(aRootDir), String(aFileName));
+    TwbBSArchive(obj).AddFileDiskRoot(String(aRootDir), String(aSourcePath));
   except
     on E: Exception do
       exception_handler(E, Result);
   end;
 end;
 
-function bsa_add_file_from_memory(obj: Pointer; const aFileName: PChar; const aSize: Cardinal; const aData: PByte): TwbBSResultMessage; stdcall;
+function bsa_add_file_from_disk(obj: Pointer; const aFilePath, aSourcePath: PChar): TwbBSResultMessage; stdcall;
 begin
   Result.code := Ord(BSA_RESULT_NONE);
   try
-    TwbBSArchive(obj).AddFileCompat(String(aFileName), aSize, aData);
+    TwbBSArchive(obj).AddFileDisk(String(aFilePath), String(aSourcePath));
   except
     on E: Exception do
       exception_handler(E, Result);
   end;
 end;
 
-function bsa_find_file_record(obj: Pointer; const aFileName: PChar): Pointer; stdcall;
+function bsa_add_file_from_memory(obj: Pointer; const aFilePath: PChar; const aSize: Cardinal; const aData: PByte): TwbBSResultMessage; stdcall;
+begin
+  Result.code := Ord(BSA_RESULT_NONE);
+  try
+    TwbBSArchive(obj).AddFileDataCompat(String(aFilePath), aSize, aData);
+  except
+    on E: Exception do
+      exception_handler(E, Result);
+  end;
+end;
+
+function bsa_find_file_record(obj: Pointer; const aFilePath: PChar): Pointer; stdcall;
 begin
   try
-    Result := TwbBSArchive(obj).FindFileRecord(String(aFileName));
+    Result := TwbBSArchive(obj).FindFileRecord(String(aFilePath));
   except
     Result := nil
   end;
@@ -212,11 +223,11 @@ begin
   end;
 end;
 
-function bsa_extract_file_data_by_filename(obj: Pointer; const aFileName: PChar): TwbBSResultMessageBuffer; stdcall;
+function bsa_extract_file_data_by_filename(obj: Pointer; const aFilePath: PChar): TwbBSResultMessageBuffer; stdcall;
 begin
   Result.message.code := Ord(BSA_RESULT_NONE);
   try
-    Result.buffer := TwbBSArchive(obj).ExtractFileDataCompat(String(aFileName));
+    Result.buffer := TwbBSArchive(obj).ExtractFileDataCompat(String(aFilePath));
   except
     on E: Exception do
       buffer_exception_handler(E, Result);
@@ -234,11 +245,11 @@ begin
   end;
 end;
 
-function bsa_extract_file(obj: Pointer; const aFileName, aSaveAs: PChar): TwbBSResultMessage; stdcall;
+function bsa_extract_file(obj: Pointer; const aFilePath, aSaveAs: PChar): TwbBSResultMessage; stdcall;
 begin
   Result.code := Ord(BSA_RESULT_NONE);
   try
-    TwbBSArchive(obj).ExtractFile(String(aFileName), String(aSaveAs));
+    TwbBSArchive(obj).ExtractFile(String(aFilePath), String(aSaveAs));
   except
     on E: Exception do
       exception_handler(E, Result);
@@ -256,12 +267,12 @@ begin
   end;
 end;
 
-function bsa_file_exists(obj: Pointer; const aFileName: string): Boolean; stdcall;
+function bsa_file_exists(obj: Pointer; const aFilePath: string): Boolean; stdcall;
 begin
   try
-    Result := TwbBSArchive(obj).FileExists(aFileName);
+    Result := TwbBSArchive(obj).FileExists(aFilePath);
   except
-    Result := False;  
+    Result := False;
   end;
 end;
 
@@ -401,6 +412,7 @@ exports
   bsa_extract_file_data_by_record,
   bsa_find_file_record,
   bsa_add_file_from_memory,
+  bsa_add_file_from_disk_root,
   bsa_add_file_from_disk,
   bsa_save,
   bsa_create_archive,

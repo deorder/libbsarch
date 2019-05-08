@@ -24,6 +24,7 @@
     <None Include=".vscode\ipch\c1c5ff332820ca89\mmap_address.bin">
       <Filter>Resource Files</Filter>
     </None>
+    <None Include="cpp.hint" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DDS.h">

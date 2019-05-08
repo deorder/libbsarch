@@ -12,6 +12,7 @@ EXPORTS
  bsa_create_archive
  bsa_save
  bsa_add_file_from_disk
+ bsa_add_file_from_disk_root
  bsa_add_file_from_memory
  bsa_find_file_record
  bsa_extract_file_data_by_record
