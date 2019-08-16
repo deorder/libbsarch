@@ -73,7 +73,7 @@ typedef enum bsa_archive_type_e {
   baNone, baTES3, baTES4, baFO3, baSSE, baFO4, baFO4dds
 } bsa_archive_type_t;
 
-typedef void (*bsa_file_dds_info_proc_t)(bsa_archive_t archive, const wchar_t *file_path, bsa_dds_info_t dds_info);
+typedef void (*bsa_file_dds_info_proc_t)(bsa_archive_t archive, const wchar_t *file_path, bsa_dds_info_t *dds_info);
 typedef bool (*bsa_file_iteration_proc_t)(bsa_archive_t archive, const wchar_t *file_path, bsa_file_record_t file_record, bsa_folder_record_t folder_record, void *context);
 
 BSARCH_DLL_API(bsa_entry_list_t) bsa_entry_list_create();
