@@ -198,7 +198,7 @@ type
 
   TDDSInfo = record Width, Height, MipMaps: Integer; end;
   TBSFileDDSInfoProcCompat = procedure(aArchive: Pointer; const aFilePath: PChar;
-    var aInfo: TDDSInfo); stdcall;
+    var aInfo: TDDSInfo; aContext: Pointer); stdcall;
 
   TwbBSHeaderTES3 = packed record
     HashOffset: Cardinal;
@@ -308,7 +308,9 @@ type
     fVersion: Cardinal;
     fCompress: Boolean;
     fShareData: Boolean;
+
     fDDSInfoProc: TBSFileDDSInfoProcCompat;
+    fDDSInfoProcContext: Pointer;
 
     fHeaderTES3: TwbBSHeaderTES3;
     fFilesTES3: array of TwbBSFileTES3;
@@ -370,6 +372,7 @@ type
     property Compress: Boolean read fCompress write fCompress;
     property ShareData: Boolean read fShareData write fShareData;
     property DDSInfoProc: TBSFileDDSInfoProcCompat read fDDSInfoProc write fDDSInfoProc;
+    property DDSInfoProcContext: Pointer read fDDSInfoProcContext write fDDSInfoProcContext;
   end;
 
 function SplitDirName(const aFilePath: string; var Dir, Name: string): Integer;
@@ -1364,7 +1367,7 @@ begin
         raise Exception.Create('DDS archive requires DDS file information callback');
 
       for i := 0 to Pred(aFilesList.Count) do begin
-        fDDSInfoProc(Self, PChar(aFilesList[i]), ddsinfo);
+        fDDSInfoProc(Self, PChar(aFilesList[i]), ddsinfo, Self.fDDSInfoProcContext);
         fDataOffset := fDataOffset + 24 {size of file record} + 24 {size of each texchunk} * GetDDSMipChunkNum(ddsinfo);
       end;
     end;

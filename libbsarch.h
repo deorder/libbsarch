@@ -73,7 +73,7 @@ typedef enum bsa_archive_type_e {
   baNone, baTES3, baTES4, baFO3, baSSE, baFO4, baFO4dds
 } bsa_archive_type_t;
 
-typedef void (*bsa_file_dds_info_proc_t)(bsa_archive_t archive, const wchar_t *file_path, bsa_dds_info_t *dds_info);
+typedef void (*bsa_file_dds_info_proc_t)(bsa_archive_t archive, const wchar_t *file_path, bsa_dds_info_t *dds_info, void *context);
 typedef bool (*bsa_file_iteration_proc_t)(bsa_archive_t archive, const wchar_t *file_path, bsa_file_record_t file_record, bsa_folder_record_t folder_record, void *context);
 
 BSARCH_DLL_API(bsa_entry_list_t) bsa_entry_list_create();
@@ -115,4 +115,4 @@ BSARCH_DLL_API(void) bsa_compress_set(bsa_archive_t archive, bool flags);
 BSARCH_DLL_API(bool) bsa_share_data_get(bsa_archive_t archive);
 BSARCH_DLL_API(void) bsa_share_data_set(bsa_archive_t archive, bool flags);
 
-BSARCH_DLL_API(void) bsa_file_dds_info_callback_set(bsa_archive_t archive, bsa_file_dds_info_proc_t file_dds_info_proc);
+BSARCH_DLL_API(void) bsa_file_dds_info_callback_set(bsa_archive_t archive, bsa_file_dds_info_proc_t file_dds_info_proc, void *context);

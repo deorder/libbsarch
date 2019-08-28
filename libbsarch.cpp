@@ -148,6 +148,6 @@ BSARCH_DLL_API(void) bsa_share_data_set(bsa_archive_t archive, bool flags) {
   return;
 }
 
-BSARCH_DLL_API(void) bsa_file_dds_info_callback_set(bsa_archive_t archive, bsa_file_dds_info_proc_t file_dds_info_proc) {
+BSARCH_DLL_API(void) bsa_file_dds_info_callback_set(bsa_archive_t archive, bsa_file_dds_info_proc_t file_dds_info_proc, void *context) {
   return;
 }

@@ -374,9 +374,10 @@ begin
   TwbBSArchive(obj).ShareData := shareData;
 end;
 
-procedure bsa_file_dds_info_callback_set(obj: Pointer; aProc: TBSFileDDSInfoProcCompat); stdcall;
+procedure bsa_file_dds_info_callback_set(obj: Pointer; aProc: TBSFileDDSInfoProcCompat; aContext: Pointer); stdcall;
 begin
   TwbBSArchive(obj).DDSInfoProc := aProc;
+  TwbBSArchive(obj).DDSInfoProcContext := aContext;
 end;
 
 exports
