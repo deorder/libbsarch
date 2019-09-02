@@ -1374,7 +1374,6 @@ begin
 
   end;
 
-
   fStream := TwbWriteCachedFileStream.Create(aFilePath, fmCreate);
   fFileName := aFilePath;
   Include(fStates, stWriting);
@@ -1550,7 +1549,8 @@ begin
 
   stream := TFileStream.Create(aSourcePath, fmOpenRead + fmShareDenyNone);
   try
-    GetMem(buffer, stream.Size);
+    // Modified: Make sure memory is zeroed when allocated
+    buffer := AllocMem(stream.Size);
     try
       stream.Read(buffer^, stream.Size);
       AddFileDataCompat(aFilePath, stream.Size, buffer);
@@ -1907,8 +1907,8 @@ begin
         FileTES3 := aFileRecord;
         fStream.Position := fDataOffset + FileTES3.Offset;
         Result.size := FileTES3.Size;
-        GetMem(Result.data, FileTES3.Size);
-        fStream.ReadBuffer(Result.data[0], Result.size);
+        // Modified: Make sure memory is zeroed when allocated
+        Result.data := AllocMem(FileTES3.Size);
       end;
 
       baTES4, baFO3, baSSE: begin
@@ -1929,7 +1929,8 @@ begin
         if bCompressed then begin
           // reading uncompressed size
           Result.size := fStream.ReadCardinal;
-          GetMem(Result.data, Result.size);
+          // Modified: Make sure memory is zeroed when allocated
+          Result.data := AllocMem(Result.size);
           dec(size, SizeOf(Cardinal));
           if (Result.size > 0) and (size > 0) then begin
             SetLength(Buffer, size);
@@ -1954,7 +1955,8 @@ begin
         end
         else begin
           Result.size := size;
-          GetMem(Result.data, Result.size);
+          // Modified: Make sure memory is zeroed when allocated
+          Result.data := AllocMem(Result.size);
           if size > 0 then
             fStream.ReadBuffer(Result.data[0], Result.size);
         end;
@@ -1967,7 +1969,8 @@ begin
           SetLength(Buffer, FileFO4.PackedSize);
           fStream.ReadBuffer(Buffer[0], Length(Buffer));
           Result.size := FileFO4.Size;
-          GetMem(Result.data, Result.size);
+          // Modified: Make sure memory is zeroed when allocated
+          Result.data := AllocMem(Result.size);
           if Assigned(Sync) then
             Sync.EndWrite;
           try
@@ -1979,7 +1982,8 @@ begin
         end
         else begin
           Result.size := FileFO4.Size;
-          GetMem(Result.data, Result.size);
+          // Modified: Make sure memory is zeroed when allocated
+          Result.data := AllocMem(Result.size);
           fStream.ReadBuffer(Result.data[0], Result.size);
         end;
       end;
@@ -1988,11 +1992,14 @@ begin
         FileFO4 := aFileRecord;
 
         TexSize := SizeOf(TDDSHeader);
+
         for i := Low(FileFO4.TexChunks) to High(FileFO4.TexChunks) do
           Inc(TexSize, FileFO4.TexChunks[i].Size);
 
         Result.size := Texsize;
-        GetMem(Result.data, Result.size);
+
+        // Modified: Make sure memory is zeroed when allocated
+        Result.data := AllocMem(Result.size);
 
         DDSHeader := @Result.data[0];
         DDSHeader.Magic := MAGIC_DDS;

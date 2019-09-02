@@ -3,7 +3,7 @@
         <ProjectGuid>{381E4D59-4D34-46B3-B039-1B3C3ABEC58F}</ProjectGuid>
         <MainSource>libbsarch.dpr</MainSource>
         <Base>True</Base>
-        <Config Condition="'$(Config)'==''">Debug</Config>
+        <Config Condition="'$(Config)'==''">Release</Config>
         <TargetedPlatforms>3</TargetedPlatforms>
         <AppType>Library</AppType>
         <FrameworkType>None</FrameworkType>
