@@ -1,8 +1,7 @@
-#ifndef BSARCH_DLL_EXPORT
-#define BSARCH_DLL_EXPORT 1
-#endif
-
+#ifdef BSARCH_DLL_EXPORT
 #include "libbsarch.h"
+
+namespace libbsarch {
 
 BSARCH_DLL_API(bsa_entry_list_t) bsa_entry_list_create() {
   return NULL;
@@ -20,7 +19,7 @@ BSARCH_DLL_API(bsa_result_message_t) bsa_entry_list_add(bsa_entry_list_t entry_l
   return { 0 };
 }
 
-BSARCH_DLL_API(uint32_t) bsa_entry_list_get(bsa_entry_list_t entry_list, uint32_t index, uint32_t string_buffer_size, const wchar_t *string_buffer) {
+BSARCH_DLL_API(uint32_t) bsa_entry_list_get(bsa_entry_list_t entry_list, uint32_t index, uint32_t string_buffer_size, wchar_t *string_buffer) {
   return 0;
 }
 
@@ -96,7 +95,7 @@ BSARCH_DLL_API(bsa_result_message_t) bsa_close(bsa_archive_t archive) {
   return { 0 };
 }
 
-BSARCH_DLL_API(uint32_t) bsa_filename_get(bsa_archive_t archive, uint32_t string_buffer_size, const wchar_t *string_buffer) {
+BSARCH_DLL_API(uint32_t) bsa_filename_get(bsa_archive_t archive, uint32_t string_buffer_size, wchar_t *string_buffer) {
   return 0;
 }
 
@@ -108,7 +107,7 @@ BSARCH_DLL_API(uint32_t) bsa_version_get(bsa_archive_t archive) {
   return 0;
 }
 
-BSARCH_DLL_API(uint32_t) bsa_format_name_get(bsa_archive_t archive, uint32_t string_buffer_size, const wchar_t *string_buffer) {
+BSARCH_DLL_API(uint32_t) bsa_format_name_get(bsa_archive_t archive, uint32_t string_buffer_size, wchar_t *string_buffer) {
   return 0;
 }
 
@@ -151,3 +150,5 @@ BSARCH_DLL_API(void) bsa_share_data_set(bsa_archive_t archive, bool flags) {
 BSARCH_DLL_API(void) bsa_file_dds_info_callback_set(bsa_archive_t archive, bsa_file_dds_info_proc_t file_dds_info_proc, void *context) {
   return;
 }
+}
+#endif

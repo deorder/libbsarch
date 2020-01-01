@@ -9,7 +9,13 @@ BSArchive Dynamic Link Library and C++ bindings
 
 ## How to use
 
-Use the `libbsarch.dll` (The one created by Delphi, not Visual Studio), `libbsarch.lib` and `libbsarch.h` in your project.
+With CMake: 
+Use ``add_subdirectory`` and ``target_link_library``
+Then ``#include "libbsarch.h"`` for the C wrapper, or ``#include "bs_archive_auto"`` for the C++ wrapper.
+See the example for code use.
+
+Without CMake:
+Use `libbsarch.dll` (provided in delphi/lib), `libbsarch.lib` and `libbsarch.h` in your project.
 
 ## Credits
 
