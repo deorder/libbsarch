@@ -16,8 +16,6 @@
 #define PACKED(datastructure) __pragma(pack(push, 1)) datastructure __pragma(pack(pop))
 #endif
 
-namespace libbsarch {
-
 typedef enum bsa_result_code_e
 {
     BSA_RESULT_NONE = 0,
@@ -147,5 +145,3 @@ BSARCH_DLL_API(void) bsa_share_data_set(bsa_archive_t archive, bool flags);
 
 BSARCH_DLL_API(void)
 bsa_file_dds_info_callback_set(bsa_archive_t archive, bsa_file_dds_info_proc_t file_dds_info_proc, void *context);
-
-}
